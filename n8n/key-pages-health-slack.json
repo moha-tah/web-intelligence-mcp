@@ -1,0 +1,219 @@
+{
+  "name": "Send broken and de-indexed page alerts with Apify to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Send broken and de-indexed page alerts with Apify to Slack\n\n### Who's it for\nSite owners, SEO consultants and agencies who can't afford a silent 404, a stray `noindex` or a canonical mistake on their money pages.\n\n### How it works\n1. Runs every morning at 7:00.\n2. Checks your list of URLs with the [URL Status & Indexability Checker](https://apify.com/moha-tah/url-status-checker) Actor. It follows redirects hop by hop with loop detection, and reads meta robots, X-Robots-Tag, the canonical and the Googlebot robots.txt verdict.\n3. Posts to Slack **only when something is wrong**:\n   - 4xx or 5xx status;\n   - DNS or TLS error;\n   - redirect loop;\n   - `noindex`;\n   - robots.txt blocking Googlebot;\n   - canonical pointing to another URL.\n\n### How to set up\n1. In **Pages to check**, list your URLs, one per line.\n2. Add your Apify credential to **Check URLs (Apify)**.\n3. Connect Slack and choose the channel.\n4. Click **Test workflow**, then activate it.\n\n### Requirements\n- An [Apify account](https://console.apify.com/sign-up) (the free plan works) and its API token, saved in n8n as a **Header Auth** credential: name `Authorization`, value `Bearer YOUR_TOKEN`.\n- A Slack credential.\n- Cost: $0.0008 per URL checked (50 URLs daily is about $1.20/month).\n\n### How to customize\nChange the schedule, send the alert by email instead, or feed the URL list from a Google Sheet or your sitemap.",
+        "height": 940,
+        "width": 500
+      },
+      "id": "a4296ef7-3da5-5539-b634-71333fe58858",
+      "name": "About this template",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1. Pages to check\nOne URL per line: home, pricing, top landing pages, key articles.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "de50b6c6-c978-5c1f-a475-1dd442c0d4f1",
+      "name": "Step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Check with Apify\nStatus, redirects and indexability. Add your Apify Header Auth credential here.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "45a07679-08b5-50a6-ab3e-83b1bbab159c",
+      "name": "Step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Alert\nOnly problems are posted to Slack; silent when everything is fine.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "baae8207-a19a-5af8-aa34-11cb7a3716ec",
+      "name": "Step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "23b976dd-6546-54e6-87d9-92176baeae6f",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7c0f6fbe-f2aa-5953-b95c-dcf77e3fba17",
+              "name": "urls",
+              "value": "https://example.com/\nhttps://example.com/pricing",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "64d304cc-e8a6-5699-9d88-5e4548679887",
+      "name": "Pages to check",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/moha-tah~url-status-checker/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ urls: $json.urls.split(/\\s+/).filter(Boolean), checkIndexability: true, checkGooglebotRobots: true }) }}",
+        "options": {
+          "timeout": 310000
+        }
+      },
+      "id": "20c458b0-c736-5ab9-a28f-87dde92ff533",
+      "name": "Check URLs (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        100,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const problems = [];\nfor (const { json: r } of $input.all()) {\n  let why = null;\n  if (r.redirectLoop) why = 'redirect loop';\n  else if (!r.ok) why = r.error || `HTTP ${r.finalStatusCode ?? r.statusCode}`;\n  else if (r.noindex) why = 'noindex';\n  else if (r.robotsTxtAllowsGooglebot === false) why = 'blocked for Googlebot in robots.txt';\n  else if (r.canonicalIsSelf === false) why = `canonical points to ${r.canonicalUrl}`;\n  if (why) problems.push(`• ${r.url} → ${why}`);\n}\nif (!problems.length) return [];\nreturn [{ json: { text: `:rotating_light: ${problems.length} key page(s) need attention\\n${problems.join('\\n')}` } }];\n"
+      },
+      "id": "4e5a58bf-5d09-5919-9aa9-1c7dc9cb2244",
+      "name": "Find problems",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#alerts"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "76dc3e1c-c753-5dea-bd2e-9da6ab308ec3",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Pages to check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pages to check": {
+      "main": [
+        [
+          {
+            "node": "Check URLs (Apify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check URLs (Apify)": {
+      "main": [
+        [
+          {
+            "node": "Find problems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find problems": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.moha-tah/web-intelligence",
+  "title": "Web & Company Intelligence",
+  "description": "Tech stack, company profile, sitemap, URL status and EU fuel price tools, pay per result.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/moha-tah/web-intelligence-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://apify.com/moha-tah",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.apify.com/?tools=moha-tah/tech-stack-detector,moha-tah/website-company-profile,moha-tah/sitemap-extractor,moha-tah/url-status-checker,moha-tah/eu-fuel-prices",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <your Apify API token> (free account: https://console.apify.com/sign-up). OAuth-capable clients can sign in instead.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

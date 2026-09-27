@@ -1,0 +1,225 @@
+{
+  "name": "Send new competitor pages from sitemaps with Apify to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Send new competitor pages from sitemaps with Apify to Slack\n\n### Who's it for\nMarketers, SEO and product teams who want to know the day a competitor ships a new landing page, pricing page, integration or blog post.\n\n### How it works\n1. Runs every morning at 8:00.\n2. Reads your competitors' XML sitemaps with the [Sitemap Extractor & Monitor](https://apify.com/moha-tah/sitemap-extractor) Actor. Sitemaps are discovered automatically from robots.txt.\n3. The Actor remembers the last state of each site, so it returns only the **URLs that were added** since the previous run.\n4. Groups the new pages by site and posts one Slack message. Nothing is sent when nothing changed.\n\nThe first run records a baseline and sends no alert.\n\n### How to set up\n1. In **Competitors**, list the websites to watch, one per line.\n2. Add your Apify credential to **Check sitemaps (Apify)**.\n3. Connect Slack and choose the channel.\n4. Run it once to create the baseline, then activate the workflow.\n\n### Requirements\n- An [Apify account](https://console.apify.com/sign-up) (the free plan works) and its API token, saved in n8n as a **Header Auth** credential: name `Authorization`, value `Bearer YOUR_TOKEN`.\n- A Slack credential.\n- Cost: $0.002 per site check plus $0.001 per new URL (10 competitors daily is about $0.60/month).\n\n### How to customize\nUse a different `monitorName` for each watch list. You can also send modified or removed pages by setting `reportModified` or `reportRemoved` in the request body.",
+        "height": 900,
+        "width": 500
+      },
+      "id": "0d159948-a075-5555-b2ac-c8361e874591",
+      "name": "About this template",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1. Competitors\nOne website per line. The monitor name keeps this list's state in your Apify account.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "25d3e5ab-9bfe-5600-9b0f-d3407e7b56c2",
+      "name": "Step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Check sitemaps with Apify\nOnly added URLs come back. Add your Apify Header Auth credential here.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "a24f6107-d82f-5882-ae4b-142720b9b299",
+      "name": "Step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Alert\nOne Slack message grouped by site; silent when nothing changed.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "f03fb5de-d166-5ca2-b563-702d210fc420",
+      "name": "Step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "59eedcf9-e2e2-5775-9b6c-156206222d83",
+      "name": "Every morning",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e17d91a-9bfc-5e14-91f8-786bd8d45e0d",
+              "name": "websites",
+              "value": "https://www.notion.com\nhttps://www.airtable.com",
+              "type": "string"
+            },
+            {
+              "id": "54905bb9-e879-5885-add2-968a84fff7c1",
+              "name": "monitorName",
+              "value": "n8n-competitor-watch",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "791f6bd8-63f4-514a-9cbd-715dec766523",
+      "name": "Competitors",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/moha-tah~sitemap-extractor/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ startUrls: $json.websites.split(/\\s+/).filter(Boolean), mode: \"monitor\", monitorName: $json.monitorName, reportModified: false, reportRemoved: false }) }}",
+        "options": {
+          "timeout": 310000
+        }
+      },
+      "id": "62f607d3-bc57-5183-92c1-23f76a6908a4",
+      "name": "Check sitemaps (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        100,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r.changeType === 'added');\nif (!rows.length) return [];\nconst bySite = {};\nfor (const r of rows) (bySite[r.site] ??= []).push(r.url);\nconst blocks = Object.entries(bySite).map(([site, urls]) =>\n  `*${site}*: ${urls.length} new page(s)\\n` + urls.slice(0, 15).map(u => `• ${u}`).join('\\n') +\n  (urls.length > 15 ? `\\n…and ${urls.length - 15} more` : ''));\nreturn [{ json: { text: `:mag: Competitor sitemaps changed\\n\\n${blocks.join('\\n\\n')}` } }];\n"
+      },
+      "id": "6f51e150-9c6e-5a21-8ab0-450c828c6c11",
+      "name": "Group new pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#alerts"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "b7dfe674-e75b-5c03-bdb4-81285d6c1038",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Every morning": {
+      "main": [
+        [
+          {
+            "node": "Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitors": {
+      "main": [
+        [
+          {
+            "node": "Check sitemaps (Apify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check sitemaps (Apify)": {
+      "main": [
+        [
+          {
+            "node": "Group new pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Group new pages": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,287 @@
+{
+  "name": "Enrich company domains in Google Sheets with logos, socials and hiring data using Apify",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Enrich company domains in Google Sheets with logos, socials and hiring data using Apify\n\n### Who's it for\nSales, growth and RevOps teams who keep a list of company websites and need firmographic context without paying for an enrichment seat.\n\n### How it works\n1. Reads every row of your Google Sheet that has a `domain` and no `enriched_at` yet.\n2. Sends all new domains in **one batch** to the [Website Company Profile](https://apify.com/moha-tah/website-company-profile) Actor on Apify.\n3. Writes back: company name, description, logo URL, LinkedIn and X pages, country, careers page, applicant tracking system with its live open-job count (Greenhouse, Lever, Ashby, Workable, Recruitee, Personio), email provider and DMARC policy.\n\nRows already enriched are skipped, so you can run it again whenever you add domains. No personal data is collected.\n\n### How to set up\n1. Create a sheet with a `domain` column (e.g. `stripe.com`).\n2. Open **Settings** and paste the sheet URL and tab name.\n3. Add your Apify credential to **Enrich domains (Apify)** and connect Google Sheets.\n4. Click **Test workflow**.\n\n### Requirements\n- An [Apify account](https://console.apify.com/sign-up) (the free plan works) and its API token, saved in n8n as a **Header Auth** credential: name `Authorization`, value `Bearer YOUR_TOKEN`.\n- A Google Sheets credential.\n- Cost: $0.003 per enriched domain, unreachable sites are free.\n\n### How to customize\nSwap the manual trigger for a Schedule or Google Sheets trigger, or map the output columns to your CRM instead of the sheet.",
+        "height": 900,
+        "width": 500
+      },
+      "id": "796d39d3-c707-526e-92e7-afde9cb0320b",
+      "name": "About this template",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1. Settings\nPaste your Google Sheet URL and tab name. The sheet needs a `domain` column.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "8bbf303f-bcc7-5482-8ff5-9e009d9648ac",
+      "name": "Step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Enrich with Apify\nAll new domains go to Apify in one call. Add your Apify Header Auth credential here.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "f4214519-7756-5523-98c8-9c49636ae38b",
+      "name": "Step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Write back\nNew columns are created automatically; rows are matched on `domain`.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "68409b49-a6ba-5dbe-8e62-f1a85a023d49",
+      "name": "Step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "437c45f5-3329-5ba3-a6d8-d2826d2a0097",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "504658ec-024c-54e2-bc61-79c551b5d01f",
+              "name": "sheetUrl",
+              "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "cb3a2582-0845-5f82-83e9-e59a9b4f857c",
+              "name": "sheetName",
+              "value": "Sheet1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6e6f2542-c650-5870-bee8-89e537af17e4",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "={{ $('Settings').first().json.sheetUrl }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Settings').first().json.sheetName }}"
+        },
+        "options": {}
+      },
+      "id": "7dc8e009-64be-544c-bfcd-d4f7f81e8f8a",
+      "name": "Read domains",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        20,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One Apify run for the whole batch is cheaper and faster than one run per row.\n// Rows that already have \"enriched_at\" are skipped, so re-running only enriches new rows.\nconst domains = [...new Set($input.all()\n  .filter(i => i.json.domain && !i.json.enriched_at)\n  .map(i => String(i.json.domain).trim()))].slice(0, 200);\nif (!domains.length) return [];\nreturn [{ json: { domains } }];\n"
+      },
+      "id": "d39e6bc0-3a40-51b6-a163-d28f723fe1bd",
+      "name": "Collect new domains",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/moha-tah~website-company-profile/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ domains: $json.domains, detectHiring: true, countJobs: true, emailSetup: true }) }}",
+        "options": {
+          "timeout": 310000
+        }
+      },
+      "id": "c030ce45-5977-54cf-b4f5-46a1973f182b",
+      "name": "Enrich domains (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// \"input\" echoes the domain exactly as sent, so it matches the sheet's \"domain\" cell.\nreturn $input.all().map(({ json: r }) => ({ json: {\n  domain: r.input || r.domain,\n  company_name: r.name ?? '',\n  description: r.description ?? '',\n  logo_url: r.logoUrl ?? '',\n  linkedin: r.socialProfiles?.linkedin ?? '',\n  x_twitter: r.socialProfiles?.x ?? '',\n  country: r.countryHint ?? '',\n  careers_page: r.hiring?.careersPage ?? '',\n  ats: r.hiring?.atsProvider ?? '',\n  open_jobs: r.hiring?.openJobs ?? '',\n  email_provider: (r.email?.providers || []).join(', '),\n  dmarc_policy: r.email?.dmarcPolicy ?? '',\n  status: r.ok ? 'ok' : (r.error || 'unreachable'),\n  enriched_at: r.scannedAt || new Date().toISOString(),\n}}));\n"
+      },
+      "id": "9faa506f-d969-5d73-8197-c631228f1e8d",
+      "name": "Flatten for the sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "={{ $('Settings').first().json.sheetUrl }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Settings').first().json.sheetName }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "domain"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "d566cf9e-42c5-58b9-a2f6-3eb31b5721b9",
+      "name": "Write back to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        820,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read domains": {
+      "main": [
+        [
+          {
+            "node": "Collect new domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect new domains": {
+      "main": [
+        [
+          {
+            "node": "Enrich domains (Apify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich domains (Apify)": {
+      "main": [
+        [
+          {
+            "node": "Flatten for the sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten for the sheet": {
+      "main": [
+        [
+          {
+            "node": "Write back to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,342 @@
+{
+  "name": "Qualify leads by tech stack with Apify from Google Sheets to Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Qualify leads by tech stack with Apify from Google Sheets to Slack\n\n### Who's it for\nAgencies, app developers and SaaS sales teams who sell to users of one platform: Shopify app makers, HubSpot partners, WordPress agencies and so on.\n\n### How it works\n1. Reads the domains in your Google Sheet that have not been scanned yet.\n2. Sends them in one batch to the [Tech Stack Detector](https://apify.com/moha-tah/tech-stack-detector) Actor. It checks 7,600+ technologies in HTML, headers, scripts and cookies, plus **DNS**, which reveals the email provider and SaaS verifications that page-only tools miss.\n3. Writes the full stack and a `match` column for the technologies you target back to the sheet.\n4. Posts the matching domains to Slack.\n\n### How to set up\n1. Create a sheet with a `domain` column.\n2. In **Settings**, list your target technologies (comma-separated, e.g. `Shopify, Klaviyo`) and paste the sheet URL and tab name.\n3. Add your Apify credential to **Scan tech stack (Apify)**, then connect Google Sheets and Slack.\n4. Choose the Slack channel and click **Test workflow**.\n\n### Requirements\n- An [Apify account](https://console.apify.com/sign-up) (the free plan works) and its API token, saved in n8n as a **Header Auth** credential: name `Authorization`, value `Bearer YOUR_TOKEN`.\n- Google Sheets and Slack credentials.\n- Cost: $0.004 per analyzed domain, unreachable sites are free.\n\n### How to customize\nReplace Slack with email or your CRM, or trigger the workflow when a new row is added.",
+        "height": 900,
+        "width": 500
+      },
+      "id": "2cf851e2-9a12-506e-b0e5-668c5eb59f7f",
+      "name": "About this template",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1. Settings\nList the technologies you target and paste your sheet URL and tab name.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "bb82d4c2-e34f-5f3a-ac7f-cb23622f319f",
+      "name": "Step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2. Scan with Apify\nOne call for all new domains. Add your Apify Header Auth credential here.",
+        "height": 300,
+        "width": 400,
+        "color": 7
+      },
+      "id": "7f71487a-c691-532b-89e6-5296082e3a87",
+      "name": "Step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3. Save and alert\nThe full stack goes back to the sheet; matching domains are posted to Slack.",
+        "height": 300,
+        "width": 620,
+        "color": 7
+      },
+      "id": "6cd45d6a-9409-5f27-879d-046b036d845d",
+      "name": "Step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -140
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9d082809-fdda-5df4-9d66-e7cc263f11ba",
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3859d38-d6ef-504a-b3b6-8484353c872e",
+              "name": "technologies",
+              "value": "Shopify, Klaviyo",
+              "type": "string"
+            },
+            {
+              "id": "e4e7bb2b-457f-5407-b48b-d59d0d468227",
+              "name": "sheetUrl",
+              "value": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID",
+              "type": "string"
+            },
+            {
+              "id": "fb28d5b4-7e00-51a9-bf01-b4a3c74732c2",
+              "name": "sheetName",
+              "value": "Sheet1",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "980b4232-1173-572e-b835-8844e84d78cc",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -200,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "={{ $('Settings').first().json.sheetUrl }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Settings').first().json.sheetName }}"
+        },
+        "options": {}
+      },
+      "id": "4f6ce85c-1412-5883-a4ac-ed391a000251",
+      "name": "Read domains",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        20,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const wanted = String($('Settings').first().json.technologies || '')\n  .split(',').map(s => s.trim()).filter(Boolean);\nconst domains = [...new Set($input.all()\n  .filter(i => i.json.domain && !i.json.scanned_at)\n  .map(i => String(i.json.domain).trim()))].slice(0, 200);\nif (!domains.length) return [];\nreturn [{ json: { domains, matchTechnologies: wanted } }];\n"
+      },
+      "id": "b2c94fd4-bda6-5fe2-a6cb-d7364d391c11",
+      "name": "Collect new domains",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/moha-tah~tech-stack-detector/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ domains: $json.domains, matchTechnologies: $json.matchTechnologies, detectDns: true, includeCompanyProfile: false }) }}",
+        "options": {
+          "timeout": 310000
+        }
+      },
+      "id": "5b265c82-deb8-50e6-9909-380c1b4ac440",
+      "name": "Scan tech stack (Apify)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(({ json: r }) => {\n  const matched = Object.entries(r.matches || {}).filter(([, v]) => v).map(([k]) => k);\n  return { json: {\n    domain: r.input || r.domain,\n    match: r.matchesAny ? 'yes' : 'no',\n    matched_technologies: matched.join(', '),\n    technologies: (r.technologyNames || []).join(', '),\n    email_providers: (r.emailProviders || []).join(', '),\n    technology_count: r.technologyCount ?? 0,\n    status: r.ok ? 'ok' : (r.error || 'unreachable'),\n    scanned_at: r.scannedAt || new Date().toISOString(),\n  }};\n});\n"
+      },
+      "id": "b0312ac4-6800-5ff5-bd8b-94516e96a428",
+      "name": "Flatten for the sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "={{ $('Settings').first().json.sheetUrl }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Settings').first().json.sheetName }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "domain"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "ef5a5dbf-01a9-5ede-9f30-8ba46d120aab",
+      "name": "Write back to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        840,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hot = $input.all().map(i => i.json).filter(r => r.match === 'yes');\nif (!hot.length) return [];\nconst lines = hot.slice(0, 30).map(r => `• ${r.domain}: ${r.matched_technologies}`);\nconst more = hot.length > 30 ? `\\n…and ${hot.length - 30} more in the sheet.` : '';\nreturn [{ json: { text: `:dart: ${hot.length} new matching lead(s)\\n${lines.join('\\n')}${more}` } }];\n"
+      },
+      "id": "492bbfc4-c8c0-50e7-b826-ba5d415ba4fe",
+      "name": "Summarize matches",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#alerts"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "id": "c5422ddc-2f73-5c0d-9c53-a8fee49e70b9",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        340
+      ]
+    }
+  ],
+  "connections": {
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read domains": {
+      "main": [
+        [
+          {
+            "node": "Collect new domains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect new domains": {
+      "main": [
+        [
+          {
+            "node": "Scan tech stack (Apify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scan tech stack (Apify)": {
+      "main": [
+        [
+          {
+            "node": "Flatten for the sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten for the sheet": {
+      "main": [
+        [
+          {
+            "node": "Write back to sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Summarize matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize matches": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

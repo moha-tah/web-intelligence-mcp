@@ -4,7 +4,7 @@
     {
       "parameters": {
         "content": "## Enrich company domains in Google Sheets with logos, socials and hiring data using Apify\n\n### Who's it for\nSales, growth and RevOps teams who keep a list of company websites and need firmographic context without paying for an enrichment seat.\n\n### How it works\n1. Reads every row of your Google Sheet that has a `domain` and no `enriched_at` yet.\n2. Sends all new domains in **one batch** to the [Website Company Profile](https://apify.com/moha-tah/website-company-profile) Actor on Apify.\n3. Writes back: company name, description, logo URL, LinkedIn and X pages, country, careers page, applicant tracking system with its live open-job count (Greenhouse, Lever, Ashby, Workable, Recruitee, Personio), email provider and DMARC policy.\n\nRows already enriched are skipped, so you can run it again whenever you add domains. No personal data is collected.\n\n### How to set up\n1. Create a sheet with a `domain` column (e.g. `stripe.com`).\n2. Open **Settings** and paste the sheet URL and tab name.\n3. Add your Apify credential to **Enrich domains (Apify)** and connect Google Sheets.\n4. Click **Test workflow**.\n\n### Requirements\n- An [Apify account](https://console.apify.com/sign-up) (the free plan works) and its API token, saved in n8n as a **Header Auth** credential: name `Authorization`, value `Bearer YOUR_TOKEN`.\n- A Google Sheets credential.\n- Cost: $0.003 per enriched domain, unreachable sites are free.\n\n### How to customize\nSwap the manual trigger for a Schedule or Google Sheets trigger, or map the output columns to your CRM instead of the sheet.",
-        "height": 900,
+        "height": 940,
         "width": 500
       },
       "id": "796d39d3-c707-526e-92e7-afde9cb0320b",
